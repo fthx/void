@@ -18,6 +18,31 @@ const PRESSURE_THRESHOLD = 150;
 const EDGE_SIZE = 100; // %
 
 
+class Panel {
+    static setPanel(height, opacity) {
+        Main.panel.height = height;
+        Main.panel._leftBox.opacity = opacity;
+        Main.panel._centerBox.opacity = opacity;
+        Main.panel._rightBox.opacity = opacity;
+    }
+
+    static showPanel(height) {
+        if (Main.panel.height == height) {
+            return;
+        }
+
+        Panel.setPanel(height, 255);
+    }
+
+    static hidePanel() {
+        if (Main.panel.height == 1) {
+            return;
+        }
+
+        Panel.setPanel(1, 0);
+    }
+}
+
 const BottomEdge = GObject.registerClass(
 class BottomEdge extends Clutter.Actor {
     _init(monitor, x, y, panelHeight) {
@@ -38,8 +63,8 @@ class BottomEdge extends Clutter.Actor {
 
         this._pressureBarrier.connectObject('trigger', this._toggleOverview.bind(this), this);
         Main.overview.connectObject(
-            'showing', this._showPanel.bind(this),
-            'hiding', this._hidePanel.bind(this),
+            'showing', () => Panel.showPanel(this._panelHeight),
+            'hiding', () => Panel.hidePanel(),
             this);
         this.connectObject('destroy', this._destroy.bind(this), this);
     }
@@ -68,36 +93,13 @@ class BottomEdge extends Clutter.Actor {
                 && !(global.get_pointer()[2] & Clutter.ModifierType.BUTTON1_MASK)
                 && !this._monitor.inFullscreen) {
             if (Main.overview.visible) {
-                this._hidePanel();
+                Panel.hidePanel();
                 Main.overview.hide();
             } else {
-                this._showPanel();
+                Panel.showPanel(this._panelHeight);
                 Main.overview.show();
             }
         }
-    }
-
-    _setPanel(height, opacity) {
-        Main.panel.height = height;
-        Main.panel._leftBox.opacity = opacity;
-        Main.panel._centerBox.opacity = opacity;
-        Main.panel._rightBox.opacity = opacity;
-    }
-
-    _showPanel() {
-        if (Main.panel.height == this._panelHeight) {
-            return;
-        }
-
-        this._setPanel(this._panelHeight, 255);
-    }
-
-    _hidePanel() {
-        if (Main.panel.height == 1) {
-            return;
-        }
-
-        this._setPanel(1, 0);
     }
 
     _destroy() {
@@ -106,8 +108,6 @@ class BottomEdge extends Clutter.Actor {
         this._pressureBarrier.disconnectObject(this);
         this._pressureBarrier.destroy();
         this._pressureBarrier = null;
-
-        this._originalPanelHeight = null;
 
         super.destroy();
     }
@@ -150,17 +150,10 @@ export default class VoidExtension {
         }
     }
 
-    _setPanel(height, opacity) {
-        Main.panel.height = height;
-        Main.panel._leftBox.opacity = opacity;
-        Main.panel._centerBox.opacity = opacity;
-        Main.panel._rightBox.opacity = opacity;
-    }
-
     enable() {
         this._panelHeight = Main.panel.height;
         if (!Main.overview.visible) {
-            this._setPanel(1, 0);
+            Panel.setPanel(1, 0);
         }
 
         Main.layoutManager.connectObject('hot-corners-changed', this._updateHotEdges.bind(this), this);
@@ -171,7 +164,7 @@ export default class VoidExtension {
         Main.layoutManager.disconnectObject(this);
         Main.layoutManager._updateHotCorners();
 
-        this._setPanel(this._panelHeight, 255);
+        Panel.setPanel(this._panelHeight, 255);
         this._panelHeight = null;
     }
 }
