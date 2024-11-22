@@ -1,0 +1,10 @@
+{
+  "description": "Fullscreen GNOME experience. Overview and top panel are triggered at the bottom edge.\n\n Very light extension. Pro tip: you can access top bars items by clicking on their place in top bar even if the top bar is hidden (panel still has a 1px height).",
+  "name": "Void",
+  "shell-version": [
+    "46", "47"
+  ],
+  "url": "https://github.com/fthx/void",
+  "uuid": "void@fthx",
+  "version": 999
+}
