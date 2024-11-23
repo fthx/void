@@ -102,7 +102,13 @@ class BottomEdge extends Clutter.Actor {
         }
     }
 
+    vfunc_leave_event(event) {
+        return Clutter.EVENT_PROPAGATE;
+    }
+
     _destroy() {
+        Main.overview.disconnectObject(this);
+
         this.setBarrierSize(0);
 
         this._pressureBarrier.disconnectObject(this);
@@ -151,6 +157,7 @@ export default class VoidExtension {
     }
 
     enable() {
+        Main.panel.style = 'transition-duration: 0ms;';
         this._panelHeight = Main.panel.height;
         if (!Main.overview.visible) {
             Panel.setPanel(1, 0);
@@ -164,6 +171,7 @@ export default class VoidExtension {
         Main.layoutManager.disconnectObject(this);
         Main.layoutManager._updateHotCorners();
 
+        Main.panel.style = null;
         Panel.setPanel(this._panelHeight, 255);
         this._panelHeight = null;
     }
