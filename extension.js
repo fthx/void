@@ -16,30 +16,39 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 const HOT_EDGE_PRESSURE_TIMEOUT = 1000; // ms
 const PRESSURE_THRESHOLD = 150;
 const EDGE_SIZE = 100; // %
+const PANEL_EASE_DURATION = 200; // ms
 
 
 class Panel {
-    static setPanel(height, opacity) {
-        Main.panel.height = height;
-        Main.panel._leftBox.opacity = opacity;
-        Main.panel._centerBox.opacity = opacity;
-        Main.panel._rightBox.opacity = opacity;
-    }
-
     static showPanel(height) {
-        if (Main.panel.height == height) {
+        if (Main.panel.height == height)
             return;
-        }
 
-        Panel.setPanel(height, 255);
+        Main.panel.height = height;
+
+        for (let item of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
+            item.ease({
+                opacity: 255,
+                duration: PANEL_EASE_DURATION,
+            });
+        }
     }
 
     static hidePanel() {
-        if (Main.panel.height == 1) {
+        if (Main.panel.height == 1)
             return;
-        }
 
-        Panel.setPanel(1, 0);
+        Main.panel.ease({
+            height: 1,
+            duration: PANEL_EASE_DURATION,
+        });
+
+        for (let item of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
+            item.ease({
+                opacity: 0,
+                duration: PANEL_EASE_DURATION,
+            });
+        }
     }
 }
 
@@ -62,10 +71,12 @@ class BottomEdge extends Clutter.Actor {
             Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW);
 
         this._pressureBarrier.connectObject('trigger', this._toggleOverview.bind(this), this);
+
         Main.overview.connectObject(
             'showing', () => Panel.showPanel(this._panelHeight),
-            'hiding', () => Panel.hidePanel(),
+            'hidden', () => Panel.hidePanel(),
             this);
+
         this.connectObject('destroy', this._destroy.bind(this), this);
     }
 
@@ -91,15 +102,8 @@ class BottomEdge extends Clutter.Actor {
     _toggleOverview() {
         if (Main.overview.shouldToggleByCornerOrButton()
                 && !(global.get_pointer()[2] & Clutter.ModifierType.BUTTON1_MASK)
-                && !this._monitor.inFullscreen) {
-            if (Main.overview.visible) {
-                Panel.hidePanel();
-                Main.overview.hide();
-            } else {
-                Panel.showPanel(this._panelHeight);
-                Main.overview.show();
-            }
-        }
+                && !this._monitor.inFullscreen)
+           Main.overview.toggle();
     }
 
     vfunc_leave_event(event) {
@@ -139,9 +143,8 @@ export default class VoidExtension {
                     let otherRightX = otherMonitor.x + otherMonitor.width;
                     let otherTopY = otherMonitor.y;
 
-                    if (otherTopY >= bottomY && otherLeftX < rightX && otherRightX > leftX) {
+                    if (otherTopY >= bottomY && otherLeftX < rightX && otherRightX > leftX)
                         hasBottom = false;
-                    }
                 }
             }
 
@@ -150,18 +153,15 @@ export default class VoidExtension {
 
                 edge.setBarrierSize(size);
                 Main.layoutManager.hotCorners.push(edge);
-            } else {
+            } else
                 Main.layoutManager.hotCorners.push(null);
-            }
         }
     }
 
     enable() {
-        Main.panel.style = 'transition-duration: 0ms;';
         this._panelHeight = Main.panel.height;
-        if (!Main.overview.visible) {
-            Panel.setPanel(1, 0);
-        }
+        if (!Main.overview.visible)
+            Panel.hidePanel();
 
         Main.layoutManager.connectObject('hot-corners-changed', this._updateHotEdges.bind(this), this);
         this._updateHotEdges();
@@ -171,8 +171,7 @@ export default class VoidExtension {
         Main.layoutManager.disconnectObject(this);
         Main.layoutManager._updateHotCorners();
 
-        Main.panel.style = null;
-        Panel.setPanel(this._panelHeight, 255);
+        Panel.showPanel(this._panelHeight);
         this._panelHeight = null;
     }
 }
