@@ -19,13 +19,11 @@ import {ANIMATION_TIME} from 'resource:///org/gnome/shell/ui/overview.js';
 const HOT_EDGE_PRESSURE_TIMEOUT = 1000; // ms
 const PRESSURE_THRESHOLD = 150;
 const EDGE_SIZE = 100; // %
-const PANEL_HEIGHT = Main.panel.height;
-const HIDDEN_PANEL_HEIGHT = 0.01;
 
 class Panel {
     static showPanel() {
         Main.panel.opacity = 255;
-        Main.panel.height = PANEL_HEIGHT;
+        Main.panel.height = -1;
 
         Main.panel.ease({
             duration: ANIMATION_TIME,
@@ -37,7 +35,7 @@ class Panel {
     static hidePanel() {
         Main.panel.ease({
             duration: ANIMATION_TIME,
-            height: HIDDEN_PANEL_HEIGHT,
+            height: 0.01,
             scale_y: 0,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onComplete: () => {
