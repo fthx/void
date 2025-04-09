@@ -10,40 +10,38 @@ import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
+import St from 'gi://St';
 
 import * as Layout from 'resource:///org/gnome/shell/ui/layout.js'
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {ANIMATION_TIME} from 'resource:///org/gnome/shell/ui/overview.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 
 const HOT_EDGE_PRESSURE_TIMEOUT = 1000; // ms
-const PRESSURE_THRESHOLD = 150;
+const PRESSURE_THRESHOLD = 150; // > 0
 const EDGE_SIZE = 100; // %
+const UNLOCKED_PANEL_BUTTON_OPACITY = 128; // 0..254
 
-class Panel {
-    static showPanel() {
-        Main.panel.opacity = 255;
-        Main.panel.height = -1;
+const PanelLockButton = GObject.registerClass(
+class PanelLockButton extends PanelMenu.Button {
+    _init() {
+        super._init();
 
-        Main.panel.ease({
-            duration: ANIMATION_TIME,
-            scale_y: 1,
-            mode: Clutter.AnimationMode.EASE_IN_QUAD,
-        });
+        this._icon = new St.Icon({icon_name: 'focus-top-bar-symbolic', style_class: 'system-status-icon'});
+        this.add_child(this._icon);
+
+        this.opacity = UNLOCKED_PANEL_BUTTON_OPACITY;
+
+        this.connectObject('button-press-event', this._onClicked.bind(this), this);
     }
 
-    static hidePanel() {
-        Main.panel.ease({
-            duration: ANIMATION_TIME,
-            height: 0.01,
-            scale_y: 0,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            onComplete: () => {
-                Main.panel.opacity = 0;
-            },
-        });
+    _onClicked() {
+        if (this.opacity == 255)
+            this.opacity = UNLOCKED_PANEL_BUTTON_OPACITY;
+        else
+            this.opacity = 255;
     }
-}
+});
 
 const BottomEdge = GObject.registerClass(
 class BottomEdge extends Clutter.Actor {
@@ -63,11 +61,6 @@ class BottomEdge extends Clutter.Actor {
             Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW);
 
         this._pressureBarrier?.connectObject('trigger', this._toggleOverview.bind(this), this);
-
-        Main.overview.connectObject(
-            'showing', () => Panel.showPanel(),
-            'hidden', () => Panel.hidePanel(),
-            this);
 
         this.connectObject('destroy', this._destroy.bind(this), this);
     }
@@ -103,8 +96,6 @@ class BottomEdge extends Clutter.Actor {
     }
 
     _destroy() {
-        Main.overview.disconnectObject(this);
-
         this.setBarrierSize(0);
 
         this._pressureBarrier?.disconnectObject(this);
@@ -116,6 +107,27 @@ class BottomEdge extends Clutter.Actor {
 });
 
 export default class VoidExtension {
+    _showPanel() {
+        Main.layoutManager.overviewGroup.remove_child(this._panelBox);
+        Main.layoutManager.addChrome(this._panelBox, {affectsStruts: true, trackFullscreen: true});
+
+        Main.overview.searchEntry.get_parent().set_style('margin-top: 0px;');
+    }
+
+    _hidePanel() {
+        Main.layoutManager.removeChrome(this._panelBox);
+        Main.layoutManager.overviewGroup.insert_child_at_index(this._panelBox, 0);
+
+        Main.overview.searchEntry.get_parent().set_style('margin-top: 32px;');
+    }
+
+    _toggleHideMode() {
+        if (this._panelLockButton.opacity == 255)
+            this._showPanel();
+        else
+            this._hidePanel();
+    }
+
     _updateHotEdges() {
         Main.layoutManager._destroyHotCorners();
 
@@ -151,17 +163,25 @@ export default class VoidExtension {
     }
 
     enable() {
-        if (!Main.overview.visible)
-            Panel.hidePanel();
+        this._panelLockButton = new PanelLockButton();
+        Main.panel.addToStatusArea('void-extension-panel-lock', this._panelLockButton);
+
+        this._panelBox = Main.layoutManager.panelBox;
+        this._hidePanel();
+        this._panelLockButton.connectObject('notify::opacity', this._toggleHideMode.bind(this), this);
 
         Main.layoutManager.connectObject('hot-corners-changed', this._updateHotEdges.bind(this), this);
         this._updateHotEdges();
     }
 
     disable() {
+        this._panelLockButton.destroy();
+        this._panelLockButton = null;
+
         Main.layoutManager.disconnectObject(this);
         Main.layoutManager._updateHotCorners();
 
-        Panel.showPanel();
+        this._showPanel();
+        this._panelBox = null;
     }
 }

@@ -1,5 +1,5 @@
 {
-  "description": "Overview and top panel are triggered at the bottom edge.\n\n Very light extension.",
+  "description": "Overview and top panel are triggered at the bottom edge. Panel lock button.\n\n Very light extension.",
   "name": "Void",
   "shell-version": ["46", "47", "48"],
   "url": "https://github.com/fthx/void",
