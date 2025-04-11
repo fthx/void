@@ -108,15 +108,19 @@ class BottomEdge extends Clutter.Actor {
 
 export default class VoidExtension {
     _showPanel() {
-        Main.layoutManager.overviewGroup.remove_child(this._panelBox);
-        Main.layoutManager.addChrome(this._panelBox, {affectsStruts: true, trackFullscreen: true});
+        if (Main.layoutManager.overviewGroup.get_children().includes(this._panelBox))
+            Main.layoutManager.overviewGroup.remove_child(this._panelBox);
+        if (Main.layoutManager.panelBox.get_parent() != Main.layoutManager.uiGroup)
+            Main.layoutManager.addChrome(this._panelBox, {affectsStruts: true, trackFullscreen: true});
 
         Main.overview.searchEntry.get_parent().set_style('margin-top: 0px;');
     }
 
     _hidePanel() {
-        Main.layoutManager.removeChrome(this._panelBox);
-        Main.layoutManager.overviewGroup.insert_child_at_index(this._panelBox, 0);
+        if (Main.layoutManager.panelBox.get_parent() == Main.layoutManager.uiGroup)
+            Main.layoutManager.removeChrome(this._panelBox);
+        if (!Main.layoutManager.overviewGroup.get_children().includes(this._panelBox))
+            Main.layoutManager.overviewGroup.insert_child_at_index(this._panelBox, 0);
 
         Main.overview.searchEntry.get_parent().set_style('margin-top: 32px;');
     }
